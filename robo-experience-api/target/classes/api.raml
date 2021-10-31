@@ -1,0 +1,26 @@
+#%RAML 1.0
+title: vangogh-experience-api
+version: v1
+baseUri: /paint/{version}
+description: Experinece API to Get the Pattern Details from Paint Webpage
+
+
+protocols:
+  - HTTP
+  - HTTPS
+
+traits:
+  clientIdSecretTrait: !include /types/client-credentials.raml
+
+
+/positions:
+  post:
+    is:
+      - clientIdSecretTrait
+    description: Post Paint co-ordinates from Webpage
+      
+    responses:
+      200:
+       body:
+        application/json:
+          example: !include /examples/position.json

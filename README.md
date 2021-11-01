@@ -1,16 +1,11 @@
 # Robo Van Gogh
 Mulesoft Hackathon 2021
-
 In this project, virtual Robots are configured to mimic a painting that is sent from a webpage via mulesoft.
 
 # Installation and Workflow
 You can download the source code and build it on your local repository. Then you can add it to AnypointStudio
 For Robot side of the configuration, kindly refer https://developercenter.robotstudio.com/webservice.
-
-# Gsuite Authentication Connector
-
-Supports server-to-server OAuth2 Authentication 
-
+ 
 # Mule supported versions
 Examples:
 Mule 3.9.x

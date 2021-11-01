@@ -1,0 +1,218 @@
+<html>
+<head>
+	<title>
+		Webpage for Painting
+	</title>
+	<style type="text/css">
+		body{
+			background-image: url('del.jpeg');
+			background-position: center;
+			background-size: cover;
+			text-align: center;
+		}
+
+		img {
+			height: 120px;
+			width: 140px;
+			vertical-align: middle;
+			margin-right: 10px;
+			}
+		.top h1{
+			font-size: 60px;
+			font-weight: 100;
+			color: #232d60;
+			font-family: serif;
+
+		}
+		.bottom{
+			margin-top: 10px;
+		}
+		
+		/*button hover style*/
+
+		.button {
+		  display: inline-block;
+		  border-radius: 4px;
+		  background-color: #232d60;
+		  border: none;
+		  color: #ffffff;
+		  text-align: center;
+		  font-size: 28px;
+		  padding: 20px;
+		  width: 200px;
+		  transition: all 0.5s;
+		  cursor: pointer;
+		  margin: 5px;
+		}
+
+		.button span {
+		  cursor: pointer;
+		  display: inline-block;
+		  position: relative;
+		  transition: 0.5s;
+		}
+
+		.button span:after {
+		  content: '\00bb';
+		  position: absolute;
+		  opacity: 0;
+		  top: 0;
+		  right: -20px;
+		  transition: 0.5s;
+		}
+
+		.button:hover span {
+		  padding-right: 25px;
+		}
+
+		.button:hover span:after {
+		  opacity: 1;
+		  right: 0;
+		}
+	</style>
+	<script type="text/javascript">
+	    var canvas, ctx, flag = false,
+	        prevX = 0,
+	        currX = 0,
+	        prevY = 0,
+	        currY = 0,
+	        dot_flag = false,
+	        pos = [],lastgpos=[];
+
+	    var x = "black",
+	        y = 3;
+	    
+	    function init() {
+	        canvas = document.getElementById('can');
+	        ctx = canvas.getContext("2d");
+	        w = canvas.width;
+	        h = canvas.height;
+	    
+	        canvas.addEventListener("mousemove", function (e) {
+	            findxy('move', e)
+	        }, false);
+	        canvas.addEventListener("mousedown", function (e) {
+	            findxy('down', e)
+	        }, false);
+	        canvas.addEventListener("mouseup", function (e) {
+	            findxy('up', e)
+	        }, false);
+	        canvas.addEventListener("mouseout", function (e) {
+	            findxy('out', e)
+	        }, false);
+	    }
+	    
+	   
+	    
+	    function draw() {
+	        ctx.beginPath();
+	        ctx.moveTo(prevX, prevY);
+	        ctx.lineTo(currX, currY);
+	        ctx.strokeStyle = x;
+	        ctx.lineWidth = y;
+	        ctx.stroke();
+	        ctx.closePath();
+	    }
+	    
+	    function Clear() {
+	        ctx.clearRect(0, 0, w, h);
+            document.getElementById("canvasimg").style.display = "none";
+            pos = [];
+            console.log("erased");
+	        
+	    }
+	    
+	    function Send() {
+	        var array_size = 85, array_limit = 850;
+	        arraysOfPos = [];
+	        // pos = pos.slice(0,312)
+	        for (var i = 0; i < pos.length; i += array_size) {
+	            arraysOfPos.push(pos.slice(i, i + array_size));
+	        }
+	        arraysOfPos = arraysOfPos.slice(0, 9);
+	        var lastArray = arraysOfPos[arraysOfPos.length - 1];
+	        while (lastArray.length != array_size) {
+	            lastArray.push(lastArray[lastArray.length - 1]);
+	        }
+	        var obj = {};
+
+	        for (let i = 0; i < arraysOfPos.length; i++) {
+	        	obj[i] = JSON.stringify(arraysOfPos[i]);
+
+	        }
+	        console.log(arraysOfPos);
+	        ProcessURL("http://127.0.0.1:8080/paint/positions",JSON.stringify(obj));
+	        }
+	    function ProcessURL(url, data) {
+	        //console.log("URL: " + url + ", Data: " + data);
+	        var xhr = new XMLHttpRequest();
+	        xhr.withCredentials = true;
+
+	        xhr.addEventListener("readystatechange", function () {
+	            if (this.readyState === 4) {
+	                console.log(this.responseText);
+	            }
+	        });
+
+	        xhr.open("POST", url);
+	        xhr.setRequestHeader("Content-Type", "application/json");
+	        xhr.send(data);
+
+	    }
+	    
+	    function findxy(res, e) {
+	        if (res == 'down') {
+	            prevX = currX;
+	            prevY = currY;
+	            currX = e.clientX - canvas.offsetLeft;
+	            currY = e.clientY - canvas.offsetTop;
+	    
+	            flag = true;
+	            dot_flag = true;
+	            if (dot_flag) {
+	                ctx.beginPath();
+	                ctx.fillStyle = x;
+	                ctx.fillRect(currX, currY, 2, 2);
+	                ctx.closePath();
+	                dot_flag = false;
+		            //pos.push([currX,currY,-2]);
+	            }
+	            console.log("Drawing Started!");
+	        }
+	        if (res == 'up' || res == "out" && flag==true) {
+	            flag = false;
+	            //pos.push([currX,currY,-1]);
+	            console.log("Drawing Ended!!!");
+	        }
+	        if (res == 'move') {
+	            if (flag) {
+	                prevX = currX;
+	                prevY = currY;
+	                currX = e.clientX - canvas.offsetLeft;
+	                currY = e.clientY - canvas.offsetTop;
+	                draw();
+		            pos.push([currX,currY,0]);
+	            }
+	        }
+	    }
+    </script>
+
+</head>
+<body onload="init()">
+	<div class = "container">
+		<div class="top">
+			<h1><u><img src="logo.png" class="logo"/><em>Robo</em> Van Gogh</u></h1>
+		</div>
+		<div class="middle">
+			<canvas id="can" width="535" height="400" style="border:2px solid;"></canvas>
+		    <img id="canvasimg" style="display:none;">
+	    </div>
+	    <div class="bottom">
+		    
+			<button class="button" style="vertical-align:middle" onclick="Send()"><span>Send </span></button>
+			<button class="button" style="vertical-align:middle" onclick="Clear()"><span>Clear </span></button>
+	    </div>
+	</div>
+</body>
+
+</html>

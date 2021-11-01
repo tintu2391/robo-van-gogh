@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:context="http://www.springframework.org/schema/context"
+      xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+
+     <apikit:config name="api-config" raml="api.raml" consoleEnabled="false" doc:name="Router" keepRamlBaseUri="false"/>
+
+    <context:property-placeholder location="api.properties" />
+
+<http:listener-config name="HTTP_Listener_Configuration" host="localhost" port="8082" doc:name="HTTP Listener Configuration"/>
+	<http:request-config name="HTTP_Request_Robo_One" host="192.168.1.109" port="3001" enableCookies="true" doc:name="HTTP Request Configuration">
+		<http:basic-authentication username="${username}" password="${password}"/>
+	</http:request-config>
+	<http:request-builder name="Request_Builder" doc:name="Request Builder" >
+		<http:header headerName="set-cookie" value="#[message.inboundProperties['set-cookie']]"/>
+	</http:request-builder>
+	<http:request-config name="HTTP_Request_Robo_Two" host="192.168.1.109" port="3002" enableCookies="true" doc:name="HTTP Request Configuration">
+		<http:basic-authentication username="${username}" password="${password}"/>
+	</http:request-config>
+	
+	<http:request-config name="HTTP_Request_Robo_Three" host="192.168.1.109" port="3003" doc:name="HTTP Request Configuration" enableCookies="true">
+		<http:basic-authentication username="${username}" password="${password}"/>
+	</http:request-config>
+	<flow name="main">
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<scatter-gather doc:name="Scatter-Gather">
+			<processor-chain>
+				<logger message="Incoming payload into Robo One : #[payload]" level="INFO" doc:name="Robot One"/>
+				<enricher target="#[flowVars.robotwoMaster]" doc:name="Message Enricher">
+					<http:request config-ref="HTTP_Request_Robo_One" path="rw/mastership/rapid?action=request" method="POST" doc:name="HTTP">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</enricher>
+				<set-variable variableName="payloadSize" value="#[payload.size()]" doc:name="Variable"/>
+				<foreach doc:name="For Each">
+					<dw:transform-message doc:name="Transform Message">
+						<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : payload
+}]]></dw:set-payload>
+					</dw:transform-message>
+					<http:request config-ref="HTTP_Request_Robo_One" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/poMule#[flowVars.counter]?action=set" method="POST" doc:name="Update">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</foreach>
+				<flow-ref name="backMainRoboOne" doc:name="Back Main RoboOne"/>
+			</processor-chain>
+			<processor-chain>
+				<logger message="Incoming payload into Robo Two : #[payload]" level="INFO" doc:name="Robot Two"/>
+				<enricher target="#[flowVars.master]" doc:name="Message Enricher">
+					<http:request config-ref="HTTP_Request_Robo_Two" path="rw/mastership/rapid?action=request" method="POST" doc:name="Request Mastership">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</enricher>
+				<set-variable variableName="payloadSize" value="#[payload.size()]" doc:name="Variable"/>
+				<foreach doc:name="For Each">
+					<dw:transform-message doc:name="Transform Message">
+						<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : payload
+}]]></dw:set-payload>
+					</dw:transform-message>
+					<http:request config-ref="HTTP_Request_Robo_Two" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/poMule#[flowVars.counter]?action=set" method="POST" doc:name="Update Rapid Variable">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</foreach>
+				<flow-ref name="backMainRoboTwo" doc:name="Back Main RoboTwo"/>
+			</processor-chain>
+			<processor-chain>
+				<logger message="Incoming payload into Robo Three : #[payload]" level="INFO" doc:name="Robot Three"/>
+				<enricher target="#[flowVars.master]" doc:name="Message Enricher">
+					<http:request config-ref="HTTP_Request_Robo_Three" path="rw/mastership/rapid?action=request" method="POST" doc:name="Request Mastership">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</enricher>
+				<set-variable variableName="payloadSize" value="#[payload.size()]" doc:name="Variable"/>
+				<foreach doc:name="For Each">
+					<dw:transform-message doc:name="Transform Message">
+						<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : payload
+}]]></dw:set-payload>
+					</dw:transform-message>
+					<http:request config-ref="HTTP_Request_Robo_Three" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/poMule#[flowVars.counter]?action=set" method="POST" doc:name="Update Rapid Variable">
+						<http:request-builder>
+							<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+							<http:header headerName="Accept" value="application/json"/>
+						</http:request-builder>
+					</http:request>
+				</foreach>
+				<flow-ref name="backMainRoboThree" doc:name="Back Main RoboThree"/>
+			</processor-chain>
+		</scatter-gather>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+"Success"]]></dw:set-payload>
+		</dw:transform-message>
+		<exception-strategy ref="apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+	</flow>
+	<sub-flow name="backMainRoboOne">
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : flowVars.payloadSize
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_One" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/nSize?action=set" method="POST" doc:name="Back Main">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<flow-ref name="roboOne" doc:name="Robo One"/>
+	</sub-flow>
+	<sub-flow name="roboOne">
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value:"TRUE"
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_One" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/bFlag?action=set" method="POST" doc:name="Change Flag">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_One" path="rw/mastership/rapid?action=release" method="POST" doc:name="Release Mastership">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<logger message="Robo One Successful paint  " level="INFO" doc:name="Logger"/>
+	</sub-flow>
+	<sub-flow name="backMainRoboTwo">
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : flowVars.payloadSize
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Two" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/nSize?action=set" method="POST" doc:name="Back Main">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<flow-ref name="roboTwo" doc:name="Robo Two"/>
+	</sub-flow>
+	<flow name="roboTwo">
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value:"TRUE"
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Two" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/bFlag?action=set" method="POST" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Two" path="rw/mastership/rapid?action=release" method="POST" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<logger message="Robo Two Successful paint  " level="INFO" doc:name="Logger"/>
+	</flow>
+	<sub-flow name="backMainRoboThree">
+			<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value : flowVars.payloadSize
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Three" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/nSize?action=set" method="POST" doc:name="Back Main">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<flow-ref name="roboThree" doc:name="Robo Three"/>
+
+	</sub-flow>
+	<sub-flow name="roboThree">
+	<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	value:"TRUE"
+}]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Three" path="rw/rapid/symbol/data/RAPID/T_ROB1/BackMain/bFlag?action=set" method="POST" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<http:request config-ref="HTTP_Request_Robo_Three" path="rw/mastership/rapid?action=release" method="POST" doc:name="HTTP">
+			<http:request-builder>
+				<http:header headerName="Content-Type" value="application/x-www-form-urlencoded;v=2.0"/>
+				<http:header headerName="Accept" value="application/json"/>
+			</http:request-builder>
+		</http:request>
+		<dw:transform-message doc:name="Transform Message">
+			<dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+		</dw:transform-message>
+		<logger message="Robo Three Successful paint " level="INFO" doc:name="Logger"/>
+
+	</sub-flow>
+
+
+  
+</mule>
